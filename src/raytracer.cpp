@@ -148,6 +148,18 @@ struct Material
     }
 };
 
+struct surfel{
+    Material m;
+    vec3 point;
+
+    surfel();
+
+    surfel(Material m, vec3 point){
+        this->m = m;
+        this->point = point;
+    }
+};
+
 /*
     triangle which enodes its three vertices
 */
@@ -180,6 +192,31 @@ struct ray
     {
         this->start = start;
         this->direction = direction;
+    }
+};
+
+/*
+    holds all the triangles in the scene
+*/
+struct World{
+    vector<triangle> tris;
+
+    /*
+        calculates if the given ray intersects a triangle and stores its surfel in an out param
+    */
+    bool intersect(ray r, surfel out){
+        vec3 point;
+        for(triangle t : tris){
+            if(isIntersectingTriangle(r, t, point)){
+                out = surfel{t.m, point};
+                return true;
+            }
+        }
+        return false;
+    };
+
+    void addTri(triangle t){
+        tris.push_back(t);
     }
 };
 
@@ -416,29 +453,24 @@ void outputImage(ofstream &image, vector<vector<int>> &imageBuffer, int width, i
     }
 };
 
-struct World{
-    vector<triangle> tris;
-
-    bool intersect(ray r, Material out){
-        vec3 point;
-        for(triangle t : tris){
-            if(isIntersectingTriangle(r, t, point)){
-                out = t.m;
-                return true;
-            }
-        }
-        return false;
-    };
-};
-
 static World w;
+
 
 vec3 pathTrace(ray r, bool isEyeRay){
     vec3 output(0.0,0.0,0.0);
-    Material surfel;
-    if(w.intersect(r, surfel)){
-        
+    surfel se;
+    if(w.intersect(r, se)){
+        //we hit a area light source on first bounce
+        if(isEyeRay){
+            
+        }
+        //if its not an eye ray or some other condition (WIP)
+        if(!isEyeRay || true){
+            //caculate the emitted area light source stuff here
+        }
+        //calculate impulse scattering here and recurse
     }
+    return output;
 };
 
 int main(int argc, char ** argv){
