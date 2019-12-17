@@ -2,6 +2,7 @@
 #include <math.h>
 #include <fstream>
 #include <vector>
+#include <random>
 
 using namespace std;
 
@@ -132,6 +133,24 @@ struct light
     float ambientIntensity;
 };
 
+struct pointLight : light{};
+
+//need to do some refactoring for light sources TODO
+struct areaLight : light
+{
+    triangle t;
+
+    surfel generateSamplePoint(){
+        //P = (1 - sqrt(r1)) * A + (sqrt(r1) * (1 - r2)) * B + (sqrt(r1) * r2) * C
+        float r1 = static_cast<float>(rand()) / static_cast<float>(1);
+        float r2 = static_cast<float>(rand()) / static_cast<float>(1);
+
+        vec3 point = (t.A * (1 - sqrtf64(r1))) + (t.B * (sqrtf64(r1) * (1 - r2))) + (t.C * (sqrtf64(r1)*r2));
+        return surfel(t.m, point);
+
+    }
+};
+
 /*
     Material which encodes the colour, diffuse intensity, specular intensity and ambient intensity
 */
@@ -151,12 +170,16 @@ struct Material
 struct surfel{
     Material m;
     vec3 point;
+    vec3 normal;
+    triangle t;
+    bool emits;
 
     surfel();
 
     surfel(Material m, vec3 point){
         this->m = m;
         this->point = point;
+        this->normal = normal;
     }
 };
 
@@ -168,6 +191,7 @@ struct triangle
     vec3 A = vec3(61, 10, 1);
     vec3 B = vec3(100, 100, 1);
     vec3 C = vec3(25, 90, 1);
+    bool emits = false;
 
     Material m;
 
@@ -201,6 +225,9 @@ struct ray
 struct World{
     vector<triangle> tris;
 
+    vector<areaLight> areaLights;
+    vector<pointLight> pointLights;
+
     /*
         calculates if the given ray intersects a triangle and stores its surfel in an out param
     */
@@ -208,7 +235,10 @@ struct World{
         vec3 point;
         for(triangle t : tris){
             if(isIntersectingTriangle(r, t, point)){
-                out = surfel{t.m, point};
+                out.m = t.m;
+                out.point = point;
+                out.normal = getPlaneNormal(t);
+                out.emits = t.emits;
                 return true;
             }
         }
@@ -455,18 +485,59 @@ void outputImage(ofstream &image, vector<vector<int>> &imageBuffer, int width, i
 
 static World w;
 
+//gamma correction = rgb ^ 1 / y where y = 2.2, repeat for each channel
+//check this through TODO
+colour gammaCorrection(colour c, float gamma){
+    colour out;
+    out.x = powf64(c.x, 1.0f/gamma);
+    out.y = powf64(c.y, 1.0f/gamma);
+    out.z = powf64(c.z, 1.0f/gamma);
+    return out;
+}
+
+vec3 estimateDirectPointLight(surfel s, ray r, vector<pointLight>sources){
+    vec3 out;
+    for(pointLight l : sources){
+        if(!isInShadow(s.point, s.normal, s.t, l)){
+            vec3 omega = l.position - s.point;
+            float dist = omega.length();
+            vec3 irradiance = l.rgb / (4 * M_PI * dist * dist);
+            //calculate output
+        }
+    }
+    return out;
+}
+
+vec3 estimateDirectAreaLight(surfel s, ray r, vector<areaLight> sources){
+    vec3 out;
+    for(areaLight l : sources){
+        surfel ls = l.generateSamplePoint();
+        if(!isInShadow(s.point, ls.point, s.t, l)){
+            vec3 omega = ls.point - s.point;
+            float dist = omega.length();
+            //calculate output
+        }return
+    }
+    return out;
+}
 
 vec3 pathTrace(ray r, bool isEyeRay){
     vec3 output(0.0,0.0,0.0);
     surfel se;
     if(w.intersect(r, se)){
         //we hit a area light source on first bounce
-        if(isEyeRay){
-            
+        if(isEyeRay && se.emits){
+            output = output + se.m.rgb; //add emissive term to output
         }
-        //if its not an eye ray or some other condition (WIP)
-        if(!isEyeRay || true){
-            //caculate the emitted area light source stuff here
+        //if its not an eye ray or some other condition (WIP) estimate direct light
+        if(!isEyeRay){
+            //caculate the emitted area light source stuff here and point light source stuff here
+            output = output + estimateDirectPointLight(se, r, w.pointLights);
+            output = output + estimateDirectAreaLight(se, r, w.areaLights);
+        }
+
+        if(!isEyeRay){
+
         }
         //calculate impulse scattering here and recurse
     }
