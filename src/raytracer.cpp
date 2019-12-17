@@ -173,6 +173,7 @@ struct surfel{
     vec3 normal;
     triangle t;
     bool emits;
+    float extinctionProb;
 
     surfel();
 
@@ -180,6 +181,10 @@ struct surfel{
         this->m = m;
         this->point = point;
         this->normal = normal;
+    }
+
+    vec3 getImpulseScatterDirection(vec3 direction){
+
     }
 };
 
@@ -194,6 +199,8 @@ struct triangle
     bool emits = false;
 
     Material m;
+
+    triangle(){}
 
     triangle(vec3 A, vec3 B, vec3 C, Material m)
     {
@@ -516,9 +523,24 @@ vec3 estimateDirectAreaLight(surfel s, ray r, vector<areaLight> sources){
             vec3 omega = ls.point - s.point;
             float dist = omega.length();
             //calculate output
-        }return
+        }
     }
     return out;
+}
+
+vec3 randomBounceDir(vec3 normal){
+
+}
+
+vec3 estimateIndirectLight(surfel se, ray r, bool isEyeRay){
+    if(rand() > se.extinctionProb){
+        return vec3(0.0, 0.0, 0.0);
+    }else{
+        vec3 bounce = randomBounceDir(se.normal);
+        ray bounceRay(se.point, bounce);
+        return pathTrace(bounceRay, isEyeRay);
+    }
+
 }
 
 vec3 pathTrace(ray r, bool isEyeRay){
@@ -535,14 +557,22 @@ vec3 pathTrace(ray r, bool isEyeRay){
             output = output + estimateDirectPointLight(se, r, w.pointLights);
             output = output + estimateDirectAreaLight(se, r, w.areaLights);
         }
-
-        if(!isEyeRay){
-
-        }
+        if(!(isEyeRay)){
         //calculate impulse scattering here and recurse
+            output = output + estimateImpulseScattering(se, r, isEyeRay);
+        }
+        if(!isEyeRay){
+            output = output + estimateIndirectLight(se, r, isEyeRay);
+        }
     }
     return output;
 };
+
+vec3 estimateImpulseScattering(surfel se, ray r, bool isEyeRay){
+    vec3 impulseDir = se.getImpulseScatterDirection(r.direction * -1.0f);
+    ray newRay(se.point, impulseDir);
+    return pathTrace(newRay, isEyeRay);
+}
 
 int main(int argc, char ** argv){
     
