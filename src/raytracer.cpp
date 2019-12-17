@@ -529,7 +529,11 @@ vec3 estimateDirectAreaLight(surfel s, ray r, vector<areaLight> sources){
 }
 
 vec3 randomBounceDir(vec3 normal){
-
+    //this method is to calculate the cosine hemisphere bounce
+    //step one create coordinate system using normal
+    //step two create sample in world space
+    //step three transform sample from world space to shaded point local coordinate system
+    //step four create ray in this direction
 }
 
 vec3 estimateIndirectLight(surfel se, ray r, bool isEyeRay){
@@ -538,7 +542,7 @@ vec3 estimateIndirectLight(surfel se, ray r, bool isEyeRay){
     }else{
         vec3 bounce = randomBounceDir(se.normal);
         ray bounceRay(se.point, bounce);
-        return pathTrace(bounceRay, isEyeRay);
+        return pathTrace(bounceRay, false);
     }
 
 }
