@@ -6,6 +6,9 @@
 
 using namespace std;
 
+
+
+
 /*
     vec3 to help with vector operations
 */
@@ -87,6 +90,8 @@ float dot(vec3 &A, vec3 &B)
     return (A.x * B.x) + (A.y * B.y) + (A.z * B.z);
 }
 
+
+
 /*
     eye/camera which encodes the position, direction from which the scene is viewed, and its up and fov 
 */
@@ -120,36 +125,6 @@ colour blend(colour a, colour b){
     return colour(a.x * b.x, a.y * b.y,a.z * b.z);
 }
 
-/*
-    point light which encodes its colour, position, diffuse intensity, specular intensity and ambient intensity as well as the specular coefficient
-*/
-struct light
-{
-    colour rgb;
-    vec3 position;
-    float diffuseIntensity;
-    float specularIntensity;
-    float specularCoeff;
-    float ambientIntensity;
-};
-
-struct pointLight : light{};
-
-//need to do some refactoring for light sources TODO
-struct areaLight : light
-{
-    triangle t;
-
-    surfel generateSamplePoint(){
-        //P = (1 - sqrt(r1)) * A + (sqrt(r1) * (1 - r2)) * B + (sqrt(r1) * r2) * C
-        float r1 = static_cast<float>(rand()) / static_cast<float>(1);
-        float r2 = static_cast<float>(rand()) / static_cast<float>(1);
-
-        vec3 point = (t.A * (1 - sqrtf64(r1))) + (t.B * (sqrtf64(r1) * (1 - r2))) + (t.C * (sqrtf64(r1)*r2));
-        return surfel(t.m, point);
-
-    }
-};
 
 /*
     Material which encodes the colour, diffuse intensity, specular intensity and ambient intensity
@@ -164,27 +139,6 @@ struct Material
 
     bool emits(){
         return emission;
-    }
-};
-
-struct surfel{
-    Material m;
-    vec3 point;
-    vec3 normal;
-    triangle t;
-    bool emits;
-    float extinctionProb;
-
-    surfel();
-
-    surfel(Material m, vec3 point){
-        this->m = m;
-        this->point = point;
-        this->normal = normal;
-    }
-
-    vec3 getImpulseScatterDirection(vec3 direction){
-
     }
 };
 
@@ -211,6 +165,62 @@ struct triangle
     }
 };
 
+struct surfel{
+    Material m;
+    vec3 point;
+    vec3 normal;
+    triangle t;
+    bool emits;
+    float extinctionProb;
+
+    surfel(){
+        
+    };
+
+    surfel(Material m, vec3 point){
+        this->m = m;
+        this->point = point;
+        this->normal = normal;
+    }
+
+    // vec3 getImpulseScatterDirection(vec3 direction){
+
+    // }
+};
+
+/*
+    point light which encodes its colour, position, diffuse intensity, specular intensity and ambient intensity as well as the specular coefficient
+*/
+struct light
+{
+    colour rgb;
+    vec3 position;
+    float diffuseIntensity;
+    float specularIntensity;
+    float specularCoeff;
+    float ambientIntensity;
+};
+
+struct pointLight : light{};
+
+//need to do some refactoring for light sources TODO
+struct areaLight : light
+{
+    triangle t;
+
+    float power;
+
+    surfel generateSamplePoint(){
+        //P = (1 - sqrt(r1)) * A + (sqrt(r1) * (1 - r2)) * B + (sqrt(r1) * r2) * C
+        float r1 = static_cast<float>(rand()) / static_cast<float>(1);
+        float r2 = static_cast<float>(rand()) / static_cast<float>(1);
+
+        vec3 point = (t.A * (1 - sqrtf64(r1))) + (t.B * (sqrtf64(r1) * (1 - r2))) + (t.C * (sqrtf64(r1)*r2));
+        return surfel(t.m, point);
+
+    }
+};
+
 /*
     ray which encodes the origin and direction
 */
@@ -227,37 +237,6 @@ struct ray
 };
 
 /*
-    holds all the triangles in the scene
-*/
-struct World{
-    vector<triangle> tris;
-
-    vector<areaLight> areaLights;
-    vector<pointLight> pointLights;
-
-    /*
-        calculates if the given ray intersects a triangle and stores its surfel in an out param
-    */
-    bool intersect(ray r, surfel out){
-        vec3 point;
-        for(triangle t : tris){
-            if(isIntersectingTriangle(r, t, point)){
-                out.m = t.m;
-                out.point = point;
-                out.normal = getPlaneNormal(t);
-                out.emits = t.emits;
-                return true;
-            }
-        }
-        return false;
-    };
-
-    void addTri(triangle t){
-        tris.push_back(t);
-    }
-};
-
-/*
     get the normal of a triangle and as a consequence the normal of the plane the triangle is on
     @param t the triangle for which the normal will calculated provided in world coordinates
     @return vec3 normal of the trianlge/plane in world coordinates
@@ -270,6 +249,7 @@ vec3 getPlaneNormal(triangle t)
     normal.normalise();
     return normal;
 }
+
 
 /*
     check if a point is inside a triangle by checking if the point is on the left of every edge
@@ -313,7 +293,6 @@ bool isInsideTriangle(triangle t, vec3 point, vec3 planeNormal)
     return true;
 }
 
-
 /*
     check if a ray is intersecting a triangle
     @param r the ray to use for checking intersection provided in world coordinates
@@ -349,6 +328,86 @@ bool isIntersectingTriangle(ray r, triangle t, vec3 &pointOut)
         return true;
     }
     return false;
+}
+
+/*
+    holds all the triangles in the scene
+*/
+struct World{
+    vector<triangle> tris;
+
+    vector<areaLight> areaLights;
+    vector<pointLight> pointLights;
+
+    /*
+        calculates if the given ray intersects a triangle and stores its surfel in an out param
+    */
+    bool intersect(ray r, surfel out){
+        vec3 point;
+        for(triangle t : tris){
+            if(isIntersectingTriangle(r, t, point)){
+                out.m = t.m;
+                out.point = point;
+                out.normal = getPlaneNormal(t);
+                out.emits = t.emits;
+                return true;
+            }
+        }
+        return false;
+    };
+
+    void addTri(triangle t){
+        tris.push_back(t);
+    }
+};
+
+/*
+    compute the diffuse intensity at a point given the light and triangle
+    @param point the point at which to compute the diffuse intensity
+    @param l the light souce provided in world coordinates
+    @param t the triangle provided in world coordinates
+    @return colour the final diffuse colour intensity at this point
+*/
+colour computeDiffuse(vec3 point, light l, triangle t)
+{
+    vec3 triangleNormal = getPlaneNormal(t);
+    vec3 vl = point - l.position;
+    float numerator = dot(triangleNormal, vl);
+    float denom = triangleNormal.length() * vl.length();
+    return l.rgb * l.diffuseIntensity * t.m.diffuseIntensity * (numerator / denom);
+}
+
+/*
+    compute the sepcular intensity at a point given a light source, triangle and eye
+    @param point the point at which to compute specular intensity
+    @param l the light source provided in world coordinates
+    @param t the triangle on which the point exists
+    @param e the eye from which the scene is viewed
+    @return colour the final specular colour intensity at this point
+*/
+colour computeSpecular(vec3 point, light l, triangle t, eye e)
+{
+    vec3 triangleNormal = getPlaneNormal(t);
+    vec3 vl = l.position - point;
+    vec3 ve = e.position - point;
+    vec3 vb = (vl + ve) / 2;
+    float numerator = dot(triangleNormal, vb);
+    float denom = triangleNormal.length() * vb.length();
+
+    float angle = numerator / denom;
+    return l.rgb * l.specularIntensity * t.m.specularIntensity * powf(angle, l.specularCoeff);
+}
+
+/*
+    compute the ambient colour for a point given a light source and a material
+    @param point the point at which to compute ambient intensity
+    @param l the light source, in world coordinates
+    @param m the matieral of the surface on which the point lives
+    @return the final colour intensity at this point
+*/
+colour computeAmbient(vec3 point, light l, Material m)
+{
+    return l.rgb * (l.ambientIntensity * m.ambientIntensity);
 }
 
 /*
@@ -491,6 +550,8 @@ void outputImage(ofstream &image, vector<vector<int>> &imageBuffer, int width, i
 };
 
 static World w;
+static eye e = eye(vec3(0, 0, 0), vec3(0, 0, 1), vec3(0, 1, 0), 90.0);
+
 
 //gamma correction = rgb ^ 1 / y where y = 2.2, repeat for each channel
 //check this through TODO
@@ -510,6 +571,10 @@ vec3 estimateDirectPointLight(surfel s, ray r, vector<pointLight>sources){
             float dist = omega.length();
             vec3 irradiance = l.rgb / (4 * M_PI * dist * dist);
             //calculate output
+            vec3 amb = computeAmbient(s.point, l, s.m);
+            vec3 diff = computeDiffuse(s.point, l, s.t);
+            vec3 spec = computeSpecular(s.point, l, s.t, e);
+            out = blend((amb + diff + spec), irradiance) * max(0.0f, dot(omega, s.normal));
         }
     }
     return out;
@@ -522,30 +587,56 @@ vec3 estimateDirectAreaLight(surfel s, ray r, vector<areaLight> sources){
         if(!isInShadow(s.point, ls.point, s.t, l)){
             vec3 omega = ls.point - s.point;
             float dist = omega.length();
-            //calculate output
+            vec3 amb = computeAmbient(s.point, l, s.m);
+            vec3 diff = computeDiffuse(s.point, l, s.t);
+            vec3 spec = computeSpecular(s.point, l, s.t, e);
+            out = (amb + diff + spec) * l.power * M_PI * max(0.0f, dot(omega, s.normal));
         }
     }
     return out;
 }
 
+//scratchapixel
+void createCoordSystem(vec3 surfaceNormal, vec3 & i_out, vec3 & j_out){
+    if(std::fabs(surfaceNormal.x) > std::fabs(surfaceNormal.y)){
+        i_out = vec3(surfaceNormal.z, 0, -surfaceNormal.x);
+        i_out.normalise();
+    }else{
+        i_out = vec3(0, -surfaceNormal.z, surfaceNormal.y);
+        i_out.normalise();
+    }
+    j_out = cross(surfaceNormal, i_out);
+}
+
+//scratchapixel
+vec3 sampleHemi(float u, float w){
+    float theta = sqrtf(1 - u * u);
+    float phi = 2 * M_PI * w;
+    float x = theta * cosf(phi);
+    float z = theta * sinf(phi);
+    return vec3(x, u, z);
+}
+
 vec3 randomBounceDir(vec3 normal){
     //this method is to calculate the cosine hemisphere bounce
     //step one create coordinate system using normal
+    vec3 i;
+    vec3 j;
+    createCoordSystem(normal, i, j);
     //step two create sample in world space
+    float u = random() / RAND_MAX;
+    float w = random() / RAND_MAX;
+    vec3 dir = sampleHemi(u, w);
     //step three transform sample from world space to shaded point local coordinate system
+    vec3 worldDir = vec3(
+        dir.x * j.x + dir.y * normal.x + dir.z * i.x, 
+        dir.x * j.y + dir.y * normal.y + dir.z * i.y,
+        dir.x * j.z + dir.y * normal.z + dir.z * i.z);
     //step four create ray in this direction
+    return worldDir;
 }
 
-vec3 estimateIndirectLight(surfel se, ray r, bool isEyeRay){
-    if(rand() > se.extinctionProb){
-        return vec3(0.0, 0.0, 0.0);
-    }else{
-        vec3 bounce = randomBounceDir(se.normal);
-        ray bounceRay(se.point, bounce);
-        return pathTrace(bounceRay, false);
-    }
-
-}
+vec3 estimateIndirectLight(surfel se, ray r, bool isEyeRay);
 
 vec3 pathTrace(ray r, bool isEyeRay){
     vec3 output(0.0,0.0,0.0);
@@ -561,10 +652,10 @@ vec3 pathTrace(ray r, bool isEyeRay){
             output = output + estimateDirectPointLight(se, r, w.pointLights);
             output = output + estimateDirectAreaLight(se, r, w.areaLights);
         }
-        if(!(isEyeRay)){
-        //calculate impulse scattering here and recurse
-            output = output + estimateImpulseScattering(se, r, isEyeRay);
-        }
+        // if(!(isEyeRay)){
+        // //calculate impulse scattering here and recurse
+        //     output = output + estimateImpulseScattering(se, r, isEyeRay);
+        // }
         if(!isEyeRay){
             output = output + estimateIndirectLight(se, r, isEyeRay);
         }
@@ -572,11 +663,22 @@ vec3 pathTrace(ray r, bool isEyeRay){
     return output;
 };
 
-vec3 estimateImpulseScattering(surfel se, ray r, bool isEyeRay){
-    vec3 impulseDir = se.getImpulseScatterDirection(r.direction * -1.0f);
-    ray newRay(se.point, impulseDir);
-    return pathTrace(newRay, isEyeRay);
+vec3 estimateIndirectLight(surfel se, ray r, bool isEyeRay){
+    if(rand() > se.extinctionProb){
+        return vec3(0.0, 0.0, 0.0);
+    }else{
+        vec3 bounce = randomBounceDir(se.normal);
+        ray bounceRay(se.point, bounce);
+        return pathTrace(bounceRay, false);
+    }
+
 }
+
+// vec3 estimateImpulseScattering(surfel se, ray r, bool isEyeRay){
+//     vec3 impulseDir = se.getImpulseScatterDirection(r.direction * -1.0f);
+//     ray newRay(se.point, impulseDir);
+//     return pathTrace(newRay, isEyeRay);
+// }
 
 int main(int argc, char ** argv){
     
@@ -590,15 +692,18 @@ int main(int argc, char ** argv){
     triangle t(vec3(-0.04688, -0.84375, 1), vec3(0.5625, 0.5625, 1), vec3(-0.60938, 0.40625, 1), Material{colour(125, 125, 125), 0.1, 0.1, 0.01});
     vec3 lightLocation = vec3{0, 0, -1};
     light l = light{colour(0, 255, 129), lightLocation, 0.01, 0.1, 100.0, 0.1};
-    eye e = eye(vec3(0, 0, 0), vec3(0, 0, 1), vec3(0, 1, 0), 90.0);
 
     for(int i = height-1; i >= 0; i--){
         for(int j = 0; j < width; j++){
-
+            vec3 dir = convertCoordinates(vec3(i, j, 1), height, width);
+            ray r = castray(e.position, dir);
+            colour pixelRadiance = pathTrace(r, true);
+            //store colour
+            imageBuffer[i][j*3] = pixelRadiance.x;
+            imageBuffer[i][j*3 + 1] = pixelRadiance.y;
+            imageBuffer[i][j*3 + 2] = pixelRadiance.z;
         }
     }
-
     ofstream out("image.ppm");
     outputImage(out, imageBuffer, width, height);
-
 }
