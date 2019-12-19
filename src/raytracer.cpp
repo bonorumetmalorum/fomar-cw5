@@ -244,6 +244,20 @@ struct areaLight : light
 
     float power;
 
+    areaLight(float power, triangle t,     colour rgb,
+    float diffuseIntensity,
+    float specularIntensity,
+    float specularCoeff,
+    float ambientIntensity){
+        this->rgb = rgb;
+        this->diffuseIntensity = diffuseIntensity;
+        this->specularIntensity = specularIntensity;
+        this->specularCoeff = specularCoeff;
+        this->ambientIntensity = ambientIntensity;
+        this->power = power;
+        this->t = t;
+    }
+
     surfel generateSamplePoint(){
         //P = (1 - sqrt(r1)) * A + (sqrt(r1) * (1 - r2)) * B + (sqrt(r1) * r2) * C
         float r1 = static_cast<float>(rand()) / static_cast<float>(1);
@@ -536,9 +550,9 @@ vec3 convertCoordinates(vec3 coord, int width, int height)
     @l the light source to which the shadow ray is cast
     @return true if intersecting with triangle false otherwise
 */
-bool isInShadow(vec3 point, vec3 normal, triangle t, light l)
+bool isInShadow(vec3 point, vec3 normal, triangle t, vec3 lPos)
 {
-    ray r = castray(point, l.position);
+    ray r = castray(point, lPos);
     vec3 pos;
     cout << r.direction.x << " " << r.direction.y << " " << r.direction.z << endl;
     if (isIntersectingTriangle(r, t, pos))
@@ -598,7 +612,7 @@ vec3 estimateDirectPointLight(surfel s, ray r, vector<pointLight>sources){
                 break;
                 std::cout << "in shadow" << endl;
             }
-            inShadow = isInShadow(s.point, s.normal, tri, l);
+            inShadow = isInShadow(s.point, s.normal, tri, l.position);
         }
         if(!inShadow){
             // std::cout << "not in shadow" << std::endl;
@@ -634,13 +648,26 @@ vec3 estimateDirectAreaLight(surfel s, ray r, vector<areaLight> sources){
     vec3 out;
     for(areaLight l : sources){
         surfel ls = l.generateSamplePoint();
-        if(!isInShadow(s.point, ls.point, s.t, l)){
+        bool inShadow = false;
+        for(triangle tri : w.tris){
+            if(tri.id == s.t.id){
+                std::cout << "same id" << endl;
+                cout << tri.id << " " << s.t.id << endl;
+                continue;
+            }
+            if(inShadow){
+                break;
+                std::cout << "in shadow" << endl;
+            }
+            inShadow = isInShadow(s.point, s.normal, tri, ls.point);
+        }
+        if(!inShadow){
             vec3 omega = ls.point - s.point;
             float dist = omega.length();
             vec3 amb = computeAmbient(s.point, l, s.m);
             vec3 diff = computeDiffuse(s.point, l, s.t);
             vec3 spec = computeSpecular(s.point, l, s.t, e);
-            //out = (amb + diff + spec) * l.power * M_PI * max(0.0f, dot(omega, s.normal));
+            out = (amb + diff + spec) * l.power * M_PI * max(0.0f, fabs(dot(omega, s.normal)));
         }
     }
     return out;
@@ -706,7 +733,7 @@ vec3 pathTrace(ray r, bool isEyeRay){
         if(!isEyeRay || true){
             //caculate the emitted area light source stuff here and point light source stuff here
             output = output + estimateDirectPointLight(se, r, w.pointLights);
-            //output = output + estimateDirectAreaLight(se, r, w.areaLights);
+            output = output + estimateDirectAreaLight(se, r, w.areaLights);
         }
         // if(!(isEyeRay)){
         // //calculate impulse scattering here and recurse
@@ -753,10 +780,18 @@ int main(int argc, char ** argv){
     triangle t2(3, vec3(-1, -1, 2), vec3(-1, -1, 1), vec3(1, -1, 1), Material{vec3(90,125,0), 0.1, 0.1, 0.1}, false);
     vec3 lightLocation = vec3{0.5, 0.5, -1};
     pointLight l = pointLight{colour(255, 123, 123), lightLocation, 0.01, 0, 80.0, 0};
+    triangle alt = triangle(4, vec3(1, 1, 1), vec3(1, 1, 2), vec3(-1, 1, 2), Material{vec3(255,255,255), 0.1, 0.1, 0.1}, true);
+    areaLight al(1.0, alt, colour(255, 255, 255), 0.1, 0.1, 100, 0.1);
+    triangle alt2 = triangle(4, vec3(-1, 1, 2), vec3(-1, 1, 1), vec3(1, 1, 1), Material{vec3(255,255,255), 0.1, 0.1, 0.1}, true);
+    areaLight al2(1.0, alt, colour(255, 255, 255), 0.1, 0.1, 100, 0.1);
+    w.areaLights.push_back(al);
+    w.areaLights.push_back(al2);
     w.pointLights.push_back(l);
     w.addTri(t);
     w.addTri(t1);
     w.addTri(t2);
+    w.addTri(alt);
+    w.addTri(alt2);
     printf("path tracing now\n");
     for(int i = height-1; i >= 0; i--){
         for(int j = 0; j < width; j++){
