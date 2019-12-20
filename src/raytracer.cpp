@@ -669,57 +669,49 @@ vec3 estimateDirectPointLight(surfel s, ray r, vector<pointLight> sources)
 vec3 estimateDirectAreaLight(surfel s, ray r, vector<areaLight> sources)
 {
     vec3 out = vec3(0, 0, 0);
-    vec3 pixelValue = vec3(0, 0, 0);
     for (areaLight l : sources)
     {
-        pixelValue = vec3(0, 0, 0);
-        //number of samples to use
-        for (int i = 0; i < 1; i++)
+        surfel ls = l.generateSamplePoint();
+        l.position = ls.point;
+        bool inShadow = false;
+        for (triangle tri : w.tris)
         {
-            surfel ls = l.generateSamplePoint();
-            l.position = ls.point;
-            bool inShadow = false;
-            for (triangle tri : w.tris)
+            if (tri.id == s.t.id || l.t.id == tri.id)
             {
-                if (tri.id == s.t.id || l.t.id == tri.id)
-                {
-                    // cout << tri.id << " " << s.t.id << endl;
-                    continue;
-                }
-                if (inShadow)
-                {
-                    break;
-                }
-                inShadow = isInShadow(s.point, s.normal, tri, ls.point);
+                // cout << tri.id << " " << s.t.id << endl;
+                continue;
             }
-            if (!inShadow)
+            if (inShadow)
             {
-                vec3 omega = ls.point - s.point;
-                float dist2 = omega.x * omega.x + omega.y * omega.y + omega.z * omega.z;
-                omega.normalise();
-                vec3 negomega = omega * -1.0f;
-
-                float dist = omega.length();
-                vec3 amb = computeAmbient(s.point, l, s.m);
-                vec3 diff = computeDiffuse(s.point, l, s.t);
-                vec3 spec = computeSpecular(s.point, l, s.t, e);
-                vec3 intensity = amb + diff + spec;
-                vec3 triColour = blend(s.t.m.rgb, intensity);
-                pixelValue = triColour * (l.power) * max(0.0f, fabs(dot(omega, s.normal))) * max(0.0f, fabs(dot(negomega, ls.normal)));
+                break;
             }
-            else
-            {
-                vec3 amb = computeAmbient(s.point, l, s.m);
-                vec3 triColour = blend(s.t.m.rgb, amb);
-                pixelValue = triColour;
-            }
+            inShadow = isInShadow(s.point, s.normal, tri, ls.point);
         }
-        pixelValue / 1;
-        out = out + pixelValue;
-        out.x = (out.x < 0) ? 0 : (out.x > 255) ? 255 : out.x;
-        out.y = (out.y < 0) ? 0 : (out.y > 255) ? 255 : out.y;
-        out.z = (out.z < 0) ? 0 : (out.z > 255) ? 255 : out.z;
+        if (!inShadow)
+        {
+            vec3 omega = ls.point - s.point;
+            float dist2 = omega.x * omega.x + omega.y * omega.y + omega.z * omega.z;
+            omega.normalise();
+            vec3 negomega = omega * -1.0f;
+
+            float dist = omega.length();
+            vec3 amb = computeAmbient(s.point, l, s.m);
+            vec3 diff = computeDiffuse(s.point, l, s.t);
+            vec3 spec = computeSpecular(s.point, l, s.t, e);
+            vec3 intensity = amb + diff + spec;
+            vec3 triColour = blend(s.t.m.rgb, intensity);
+            out = out + triColour * (l.power) * max(0.0f, fabs(dot(omega, s.normal))) * max(0.0f, fabs(dot(negomega, ls.normal)));
+        }
+        else
+        {
+            vec3 amb = computeAmbient(s.point, l, s.m);
+            vec3 triColour = blend(s.t.m.rgb, amb);
+            out = out + triColour;
+        }
     }
+    out.x = (out.x < 0) ? 0 : (out.x > 255) ? 255 : out.x;
+    out.y = (out.y < 0) ? 0 : (out.y > 255) ? 255 : out.y;
+    out.z = (out.z < 0) ? 0 : (out.z > 255) ? 255 : out.z;
     return out;
 }
 
@@ -872,8 +864,8 @@ int main(int argc, char **argv)
     // --area light setup
 
     //uncomment for area lights
-    //w.areaLights.push_back(al); //--area lights that are not working correctly
-    //w.areaLights.push_back(al2);
+    // w.areaLights.push_back(al); //--area lights that are not working correctly
+    // w.areaLights.push_back(al2);
 
     //--point light setup
     vec3 lightLocation = vec3{0, 0, -1};
