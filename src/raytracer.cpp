@@ -593,14 +593,19 @@ static World w;
 static eye e = eye(vec3(0, 0, 0), vec3(0, 0, 1), vec3(0, 1, 0), 90.0);
 
 
-//gamma correction = rgb ^ 1 / y where y = 2.2, repeat for each channel
-//check this through TODO
+/*
+    gamma correction
+    @param c the colour to gamma correct
+    @param gamma the amount of gamma to apply
+    @return colour the gamma corrected colour
+*/
 colour gammaCorrection(colour c, float gamma){
     colour out;
-    out.x = powf64(c.x, 1.0f/gamma);
-    out.y = powf64(c.y, 1.0f/gamma);
-    out.z = powf64(c.z, 1.0f/gamma);
-    return out;
+    colour ranged = c/255.0f;
+    out.x = powf64(ranged.x, 1.0f/gamma);
+    out.y = powf64(ranged.y, 1.0f/gamma);
+    out.z = powf64(ranged.z, 1.0f/gamma);
+    return ranged * 255;
 }
 
 vec3 estimateDirectPointLight(surfel s, ray r, vector<pointLight>sources){
@@ -820,12 +825,12 @@ int main(int argc, char ** argv){
     areaLight al2(1, roof2, colour(255, 255, 255), 0.1, 0.1, 100, 0.1);
     // --area light setup
 
-    //w.areaLights.push_back(al); --area lights that are not working correctly
+    //w.areaLights.push_back(al); //--area lights that are not working correctly
     //w.areaLights.push_back(al2);
    
     //--point light setup
     vec3 lightLocation = vec3{0, 0, -1};
-    pointLight l = pointLight{colour(255, 255, 255), lightLocation, 0.01, 0.01, 80.0, 0.01};
+    pointLight l = pointLight{colour(255, 255, 255), lightLocation, 0.01, 0.1, 80.0, 0.01};
     w.pointLights.push_back(l);
     //--point light setup
 
@@ -846,6 +851,7 @@ int main(int argc, char ** argv){
             ray r = castray(e.position, dir);
             colour pixelRadiance = pathTrace(r, true);
             //store colour
+            pixelRadiance = gammaCorrection(pixelRadiance, 2.2);
             imageBuffer[i][j*3] = pixelRadiance.x;
             imageBuffer[i][j*3 + 1] = pixelRadiance.y;
             imageBuffer[i][j*3 + 2] = pixelRadiance.z;
