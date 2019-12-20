@@ -652,7 +652,8 @@ vec3 estimateDirectAreaLight(surfel s, ray r, vector<areaLight> sources){
     vec3 pixelValue = vec3(0,0,0);
     for(areaLight l : sources){
         pixelValue = vec3(0,0,0);
-        for(int i = 0; i < 10; i++){
+        //number of samples to use
+        for(int i = 0; i < 3; i++){
             surfel ls = l.generateSamplePoint();
             l.position = ls.point;
             bool inShadow = false;
@@ -682,7 +683,7 @@ vec3 estimateDirectAreaLight(surfel s, ray r, vector<areaLight> sources){
        
             }
         }
-        pixelValue / 10;
+        pixelValue / 3;
         out = out + pixelValue;
         out.x = (out.x < 0) ? 0 : (out.x > 255) ? 255 : out.x;
         out.y = (out.y < 0) ? 0 : (out.y > 255) ? 255 : out.y;
