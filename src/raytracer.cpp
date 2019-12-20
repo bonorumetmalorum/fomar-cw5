@@ -319,13 +319,13 @@ bool isInsideTriangle(triangle t, vec3 point, vec3 planeNormal)
     float lTriNormal3 = triNormal3.length();
 
     float dot1 = dot(planeNormal, triNormal1);
-    if (dot1 < 0)
+    if (dot1 < 0.0)
         return false;
     float dot2 = dot(planeNormal, triNormal2);
-    if (dot2 < 0)
+    if (dot2 < 0.0)
         return false;
     float dot3 = dot(planeNormal, triNormal3);
-    if (dot3 < 0)
+    if (dot3 < 0.0)
         return false;
 
     return true;
@@ -344,7 +344,7 @@ bool isIntersectingTriangle(ray r, triangle t, vec3 &pointOut)
 
     float denom = dot(normal, r.direction);
 
-    if (denom <= 0.0)
+    if (denom == 0.0)
     {
         return false;
     }
@@ -556,7 +556,7 @@ vec3 convertCoordinates(vec3 coord, int width, int height)
 */
 bool isInShadow(vec3 point, vec3 normal, triangle t, vec3 lPos)
 {
-    ray r = castray(point + (normal * 0.01), lPos);
+    ray r = castray(point + (normal * 0.0000000000001), lPos);
     vec3 pos;
     //cout << r.direction.x << " " << r.direction.y << " " << r.direction.z << endl;
     if (isIntersectingTriangle(r, t, pos))
@@ -642,6 +642,13 @@ vec3 estimateDirectPointLight(surfel s, ray r, vector<pointLight>sources){
             out.x = (out.x < 0) ? 0 : (out.x > 255) ? 255 : out.x;
             out.y = (out.y < 0) ? 0 : (out.y > 255) ? 255 : out.y;
             out.z = (out.z < 0) ? 0 : (out.z > 255) ? 255 : out.z;
+        }else{
+            vec3 amb = computeAmbient(s.point, l, s.t.m);
+            colour triColour = blend(s.m.rgb, amb);
+            out = triColour;
+            out.x = (out.x < 0) ? 0 : (out.x > 255) ? 255 : out.x;
+            out.y = (out.y < 0) ? 0 : (out.y > 255) ? 255 : out.y;
+            out.z = (out.z < 0) ? 0 : (out.z > 255) ? 255 : out.z;
         }
     }
     return out;
@@ -696,8 +703,11 @@ vec3 estimateDirectAreaLight(surfel s, ray r, vector<areaLight> sources){
     return out;
 }
 
-//scratchapixel
+/*
+    create a local coordinate system for the point in order to cast rays in the direction of the surface normal
+*/
 void createCoordSystem(vec3 surfaceNormal, vec3 & i_out, vec3 & j_out){
+    //find a vector lying in the surface plane (guaranteed for it ot be perpendicular to the normal)
     if(std::fabs(surfaceNormal.x) > std::fabs(surfaceNormal.y)){
         i_out = vec3(surfaceNormal.z, 0, -surfaceNormal.x);
         i_out.normalise();
@@ -705,10 +715,14 @@ void createCoordSystem(vec3 surfaceNormal, vec3 & i_out, vec3 & j_out){
         i_out = vec3(0, -surfaceNormal.z, surfaceNormal.y);
         i_out.normalise();
     }
+    //find the other axis by doing a cross product
     j_out = cross(surfaceNormal, i_out);
+    j_out.normalise();
 }
 
-//scratchapixel
+/*
+    random uniform cosine weighted hemisphere direction
+*/
 vec3 sampleHemi(float u, float w){
     float theta = sqrtf(1 - u * u);
     float phi = 2 * M_PI * w;
@@ -717,6 +731,9 @@ vec3 sampleHemi(float u, float w){
     return vec3(x, u, z);
 }
 
+/*
+    create a random bounce direction in the direction of the normal
+*/
 vec3 randomBounceDir(vec3 normal){
     //this method is to calculate the cosine hemisphere bounce
     //step one create coordinate system using normal
@@ -758,6 +775,7 @@ vec3 pathTrace(ray r, bool isEyeRay){
             output = output + estimateDirectPointLight(se, r, w.pointLights);
             output = output + estimateDirectAreaLight(se, r, w.areaLights); //not working correctly
         }
+        //impulse scattering not completed, WIP
         // if(!(isEyeRay)){
         // //calculate impulse scattering here and recurse
         //     output = output + estimateImpulseScattering(se, r, isEyeRay);
@@ -769,7 +787,7 @@ vec3 pathTrace(ray r, bool isEyeRay){
     return output;
 };
 
-//untested method
+//untested method, 100% chance of finding dragons here
 vec3 estimateIndirectLight(surfel se, ray r, bool isEyeRay){
     if(random() / RAND_MAX > se.extinctionProb){
         return vec3(0.0, 0.0, 0.0);
@@ -810,21 +828,22 @@ int main(int argc, char ** argv){
     triangle floor2(8, vec3(-1, -1, 2), vec3(-1, -1, 1), vec3(1, -1, 1), Material{vec3(255,255,255), 0.1, 0.1, 0.1}, false);
 
     //for use as area light set emission to true (last variable)
-    triangle roof1 = triangle(9,vec3(1, 1, 2), vec3(1, 1, 1), vec3(-1, 1, 2), Material{vec3(255,255,255), 0.1, 0.1, 0.1}, true);
-    triangle roof2 = triangle(10, vec3(-1, 1, 1), vec3(-1, 1, 2), vec3(1, 1, 1), Material{vec3(255,255,255), 0.1, 0.1, 0.1}, true);
+    triangle roof1 = triangle(9,vec3(1, 1, 2), vec3(1, 1, 1), vec3(-1, 1, 2), Material{vec3(255,255,255), 0.1, 0.1, 0.1}, false);
+    triangle roof2 = triangle(10, vec3(-1, 1, 1), vec3(-1, 1, 2), vec3(1, 1, 1), Material{vec3(255,255,255), 0.1, 0.1, 0.1}, false);
     
     //--area light setup
     areaLight al(0.4, roof1, colour(255, 255, 255), 0.01, 0.01, 100, 0.1);
     areaLight al2(0.4, roof2, colour(255, 255, 255), 0.01, 0.01, 100, 0.1);
     // --area light setup
 
-    w.areaLights.push_back(al); //--area lights that are not working correctly
-    w.areaLights.push_back(al2);
+    //uncomment for area lights
+    //w.areaLights.push_back(al); //--area lights that are not working correctly
+    //w.areaLights.push_back(al2);
    
     //--point light setup
     vec3 lightLocation = vec3{0, 0, -1};
     pointLight l = pointLight{colour(255, 255, 255), lightLocation, 0.01, 0.1, 80.0, 0.01};
-    //w.pointLights.push_back(l);
+    w.pointLights.push_back(l); //uncomment for point light
     //--point light setup
 
     w.addTri(wallleft1);
