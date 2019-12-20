@@ -781,9 +781,9 @@ int main(int argc, char ** argv){
     vec3 lightLocation = vec3{0.5, 0.5, -1};
     pointLight l = pointLight{colour(255, 123, 123), lightLocation, 0.01, 0, 80.0, 0};
     triangle alt = triangle(4, vec3(1, 1, 1), vec3(1, 1, 2), vec3(-1, 1, 2), Material{vec3(255,255,255), 0.1, 0.1, 0.1}, true);
-    areaLight al(1.0, alt, colour(255, 255, 255), 0.1, 0.1, 100, 0.1);
+    areaLight al(4, alt, colour(255, 255, 255), 0.1, 0.1, 100, 0.1);
     triangle alt2 = triangle(4, vec3(-1, 1, 2), vec3(-1, 1, 1), vec3(1, 1, 1), Material{vec3(255,255,255), 0.1, 0.1, 0.1}, true);
-    areaLight al2(1.0, alt, colour(255, 255, 255), 0.1, 0.1, 100, 0.1);
+    areaLight al2(4, alt, colour(255, 255, 255), 0.1, 0.1, 100, 0.1);
     w.areaLights.push_back(al);
     w.areaLights.push_back(al2);
     w.pointLights.push_back(l);
