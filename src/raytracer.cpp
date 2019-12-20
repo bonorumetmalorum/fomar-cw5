@@ -1,13 +1,10 @@
- #include <iostream>
+#include <iostream>
 #include <math.h>
 #include <fstream>
 #include <vector>
 #include <random>
 
 using namespace std;
-
-
-
 
 /*
     vec3 to help with vector operations
@@ -89,8 +86,6 @@ float dot(vec3 &A, vec3 &B)
     return (A.x * B.x) + (A.y * B.y) + (A.z * B.z);
 }
 
-
-
 /*
     eye/camera which encodes the position, direction from which the scene is viewed, and its up and fov 
 */
@@ -120,10 +115,10 @@ typedef vec3 colour;
     @param a colour provided between the range 0-255 per channel
     @param b colout provided between the range 0-1 per channel
 */
-colour blend(colour a, colour b){
-    return colour(a.x * b.x, a.y * b.y,a.z * b.z);
+colour blend(colour a, colour b)
+{
+    return colour(a.x * b.x, a.y * b.y, a.z * b.z);
 }
-
 
 /*
     Material which encodes the colour, diffuse intensity, specular intensity and ambient intensity
@@ -136,7 +131,8 @@ struct Material
     float ambientIntensity;
     bool emission;
 
-    bool emits(){
+    bool emits()
+    {
         return emission;
     }
 };
@@ -154,7 +150,7 @@ struct triangle
 
     Material m;
 
-    triangle(){}
+    triangle() {}
 
     triangle(int id, vec3 A, vec3 B, vec3 C, Material m, bool emits)
     {
@@ -167,7 +163,8 @@ struct triangle
     }
 };
 
-struct surfel{
+struct surfel
+{
     Material m;
     vec3 point;
     vec3 normal;
@@ -179,7 +176,8 @@ struct surfel{
 
     };
 
-    surfel(Material m, vec3 point, vec3 normal, bool emits){
+    surfel(Material m, vec3 point, vec3 normal, bool emits)
+    {
         this->m = m;
         this->point = point;
         this->normal = normal;
@@ -204,14 +202,16 @@ struct light
     float ambientIntensity;
 };
 
-struct pointLight : light{
+struct pointLight : light
+{
     pointLight(
-    colour rgb,
-    vec3 position,
-    float diffuseIntensity,
-    float specularIntensity,
-    float specularCoeff,
-    float ambientIntensity) {
+        colour rgb,
+        vec3 position,
+        float diffuseIntensity,
+        float specularIntensity,
+        float specularCoeff,
+        float ambientIntensity)
+    {
         this->rgb = rgb;
         this->position = position;
         this->diffuseIntensity = diffuseIntensity;
@@ -219,7 +219,6 @@ struct pointLight : light{
         this->specularCoeff = specularCoeff;
         this->ambientIntensity = ambientIntensity;
     }
-
 };
 
 /*
@@ -236,7 +235,6 @@ vec3 getPlaneNormal(triangle t)
     return normal;
 }
 
-
 struct areaLight : light
 {
     triangle t;
@@ -244,13 +242,14 @@ struct areaLight : light
     float power;
 
     areaLight(
-    float power, 
-    triangle t,     
-    colour rgb,
-    float diffuseIntensity,
-    float specularIntensity,
-    float specularCoeff,
-    float ambientIntensity){
+        float power,
+        triangle t,
+        colour rgb,
+        float diffuseIntensity,
+        float specularIntensity,
+        float specularCoeff,
+        float ambientIntensity)
+    {
         this->rgb = rgb;
         this->diffuseIntensity = diffuseIntensity;
         this->specularIntensity = specularIntensity;
@@ -260,14 +259,16 @@ struct areaLight : light
         this->t = t;
     }
 
-    surfel generateSamplePoint(){
+    surfel generateSamplePoint()
+    {
         float r1 = random() / float(RAND_MAX);
         float r2 = random() / float(RAND_MAX);
-        if(r1 + r1 >= 1){
+        if (r1 + r1 >= 1)
+        {
             r1 = 1 - r1;
             r2 = 1 - r2;
         }
-        vec3 point = t.A + ((t.B - t.A) * r1)+ ((t.C - t.A) * r2);
+        vec3 point = t.A + ((t.B - t.A) * r1) + ((t.C - t.A) * r2);
         // cout << "generated sample point: " << point.x << " " << point.y << " " << point.z << endl;
         return surfel(t.m, point, getPlaneNormal(t), true);
     }
@@ -287,7 +288,6 @@ struct ray
         this->direction = direction;
     }
 };
-
 
 /*
     check if a point is inside a triangle by checking if the point is on the left of every edge
@@ -371,20 +371,23 @@ bool isIntersectingTriangle(ray r, triangle t, vec3 &pointOut)
 /*
     holds all the triangles in the scene
 */
-struct World{
+struct World
+{
     vector<triangle> tris;
 
     vector<areaLight> areaLights;
     vector<pointLight> pointLights;
 
-    
     /*
         calculates if the given ray intersects a triangle and stores its surfel in an out param
     */
-    bool intersect(ray r, surfel & out){
+    bool intersect(ray r, surfel &out)
+    {
         vec3 point;
-        for(triangle t : tris){
-            if(isIntersectingTriangle(r, t, point)){
+        for (triangle t : tris)
+        {
+            if (isIntersectingTriangle(r, t, point))
+            {
                 out.m = t.m;
                 out.point = point;
                 out.normal = getPlaneNormal(t);
@@ -396,7 +399,8 @@ struct World{
         return false;
     };
 
-    void addTri(triangle t){
+    void addTri(triangle t)
+    {
         tris.push_back(t);
     }
 };
@@ -430,7 +434,7 @@ vec3 computeSpecular(vec3 point, light l, triangle t, eye e)
     vec3 triangleNormal = getPlaneNormal(t);
     vec3 vl = l.position - point;
     vec3 ve = e.position - point;
-    vec3 vb = (vl + ve)/2.0f;
+    vec3 vb = (vl + ve) / 2.0f;
     float numerator = dot(triangleNormal, vb);
     float denom = triangleNormal.length() * vb.length();
 
@@ -512,7 +516,7 @@ colour baryinterp(vec3 point, triangle t)
     R = 255 * alpha;
     G = 255 * beta;
     B = 255 * gamma;
-    vec3 colour(255,255,129);
+    vec3 colour(255, 255, 129);
     colour.x = (R < 0) ? 0 : (R > 255) ? 255 : R;
     colour.y = (G < 0) ? 0 : (G > 255) ? 255 : G;
     colour.z = (B < 0) ? 0 : (B > 255) ? 255 : B;
@@ -590,37 +594,43 @@ void outputImage(ofstream &image, vector<vector<int>> &imageBuffer, int width, i
 static World w;
 static eye e = eye(vec3(0, 0, 0), vec3(0, 0, 1), vec3(0, 1, 0), 90.0);
 
-
 /*
     gamma correction
     @param c the colour to gamma correct
     @param gamma the amount of gamma to apply
     @return colour the gamma corrected colour
 */
-colour gammaCorrection(colour c, float gamma){
+colour gammaCorrection(colour c, float gamma)
+{
     colour out;
-    colour ranged = c/255.0f;
-    out.x = powf64(ranged.x, 1.0f/gamma);
-    out.y = powf64(ranged.y, 1.0f/gamma);
-    out.z = powf64(ranged.z, 1.0f/gamma);
+    colour ranged = c / 255.0f;
+    out.x = powf64(ranged.x, 1.0f / gamma);
+    out.y = powf64(ranged.y, 1.0f / gamma);
+    out.z = powf64(ranged.z, 1.0f / gamma);
     return ranged * 255;
 }
 
-vec3 estimateDirectPointLight(surfel s, ray r, vector<pointLight>sources){
-    vec3 out(0.0,0,0);
-    for(pointLight l : sources){
+vec3 estimateDirectPointLight(surfel s, ray r, vector<pointLight> sources)
+{
+    vec3 out(0.0, 0, 0);
+    for (pointLight l : sources)
+    {
         bool inShadow = false;
-        for(triangle tri : w.tris){
-            if(tri.id == s.t.id){
+        for (triangle tri : w.tris)
+        {
+            if (tri.id == s.t.id)
+            {
                 // cout << tri.id << " " << s.t.id << endl;
                 continue;
             }
-            if(inShadow){
+            if (inShadow)
+            {
                 break;
             }
             inShadow = isInShadow(s.point, s.normal, tri, l.position);
         }
-        if(!inShadow){
+        if (!inShadow)
+        {
             vec3 omega = l.position - s.point;
             float dist = omega.length();
             //std::cout << "length of omega: " << dist << std::endl;
@@ -637,12 +647,14 @@ vec3 estimateDirectPointLight(surfel s, ray r, vector<pointLight>sources){
             vec3 intensity = amb + diff + spec;
             colour triColour = blend(s.m.rgb, intensity);
 
-            out = blend(triColour, irradiance) * angle;     
-                   
+            out = blend(triColour, irradiance) * angle;
+
             out.x = (out.x < 0) ? 0 : (out.x > 255) ? 255 : out.x;
             out.y = (out.y < 0) ? 0 : (out.y > 255) ? 255 : out.y;
             out.z = (out.z < 0) ? 0 : (out.z > 255) ? 255 : out.z;
-        }else{
+        }
+        else
+        {
             vec3 amb = computeAmbient(s.point, l, s.t.m);
             colour triColour = blend(s.m.rgb, amb);
             out = triColour;
@@ -654,27 +666,34 @@ vec3 estimateDirectPointLight(surfel s, ray r, vector<pointLight>sources){
     return out;
 }
 
-vec3 estimateDirectAreaLight(surfel s, ray r, vector<areaLight> sources){
-    vec3 out = vec3(0,0,0);
-    vec3 pixelValue = vec3(0,0,0);
-    for(areaLight l : sources){
-        pixelValue = vec3(0,0,0);
+vec3 estimateDirectAreaLight(surfel s, ray r, vector<areaLight> sources)
+{
+    vec3 out = vec3(0, 0, 0);
+    vec3 pixelValue = vec3(0, 0, 0);
+    for (areaLight l : sources)
+    {
+        pixelValue = vec3(0, 0, 0);
         //number of samples to use
-        for(int i = 0; i < 1; i++){
+        for (int i = 0; i < 1; i++)
+        {
             surfel ls = l.generateSamplePoint();
             l.position = ls.point;
             bool inShadow = false;
-            for(triangle tri : w.tris){
-                if(tri.id == s.t.id || l.t.id == tri.id){
+            for (triangle tri : w.tris)
+            {
+                if (tri.id == s.t.id || l.t.id == tri.id)
+                {
                     // cout << tri.id << " " << s.t.id << endl;
                     continue;
                 }
-                if(inShadow){
+                if (inShadow)
+                {
                     break;
                 }
                 inShadow = isInShadow(s.point, s.normal, tri, ls.point);
             }
-            if(!inShadow){
+            if (!inShadow)
+            {
                 vec3 omega = ls.point - s.point;
                 float dist2 = omega.x * omega.x + omega.y * omega.y + omega.z * omega.z;
                 omega.normalise();
@@ -686,9 +705,10 @@ vec3 estimateDirectAreaLight(surfel s, ray r, vector<areaLight> sources){
                 vec3 spec = computeSpecular(s.point, l, s.t, e);
                 vec3 intensity = amb + diff + spec;
                 vec3 triColour = blend(s.t.m.rgb, intensity);
-                pixelValue = triColour * (l.power) * max(0.0f, fabs(dot(omega, s.normal))) * max(0.0f, fabs(dot(negomega, ls.normal))) ;
-       
-            }else{
+                pixelValue = triColour * (l.power) * max(0.0f, fabs(dot(omega, s.normal))) * max(0.0f, fabs(dot(negomega, ls.normal)));
+            }
+            else
+            {
                 vec3 amb = computeAmbient(s.point, l, s.m);
                 vec3 triColour = blend(s.t.m.rgb, amb);
                 pixelValue = triColour;
@@ -706,12 +726,16 @@ vec3 estimateDirectAreaLight(surfel s, ray r, vector<areaLight> sources){
 /*
     create a local coordinate system for the point in order to cast rays in the direction of the surface normal
 */
-void createCoordSystem(vec3 surfaceNormal, vec3 & i_out, vec3 & j_out){
+void createCoordSystem(vec3 surfaceNormal, vec3 &i_out, vec3 &j_out)
+{
     //find a vector lying in the surface plane (guaranteed for it ot be perpendicular to the normal)
-    if(std::fabs(surfaceNormal.x) > std::fabs(surfaceNormal.y)){
+    if (std::fabs(surfaceNormal.x) > std::fabs(surfaceNormal.y))
+    {
         i_out = vec3(surfaceNormal.z, 0, -surfaceNormal.x);
         i_out.normalise();
-    }else{
+    }
+    else
+    {
         i_out = vec3(0, -surfaceNormal.z, surfaceNormal.y);
         i_out.normalise();
     }
@@ -723,7 +747,8 @@ void createCoordSystem(vec3 surfaceNormal, vec3 & i_out, vec3 & j_out){
 /*
     random uniform cosine weighted hemisphere direction
 */
-vec3 sampleHemi(float u, float w){
+vec3 sampleHemi(float u, float w)
+{
     float theta = sqrtf(1 - u * u);
     float phi = 2 * M_PI * w;
     float x = theta * cosf(phi);
@@ -734,7 +759,8 @@ vec3 sampleHemi(float u, float w){
 /*
     create a random bounce direction in the direction of the normal
 */
-vec3 randomBounceDir(vec3 normal){
+vec3 randomBounceDir(vec3 normal)
+{
     //this method is to calculate the cosine hemisphere bounce
     //step one create coordinate system using normal
     vec3 i;
@@ -746,7 +772,7 @@ vec3 randomBounceDir(vec3 normal){
     vec3 dir = sampleHemi(u, w);
     //step three transform sample from world space to shaded point local coordinate system
     vec3 worldDir = vec3(
-        dir.x * j.x + dir.y * normal.x + dir.z * i.x, 
+        dir.x * j.x + dir.y * normal.x + dir.z * i.x,
         dir.x * j.y + dir.y * normal.y + dir.z * i.y,
         dir.x * j.z + dir.y * normal.z + dir.z * i.z);
     //step four create ray in this direction
@@ -760,17 +786,21 @@ vec3 estimateIndirectLight(surfel se, ray r, bool isEyeRay);
 static bool directLighting = true;
 static bool indirectLighting = false;
 
-vec3 pathTrace(ray r, bool isEyeRay){
+vec3 pathTrace(ray r, bool isEyeRay)
+{
     vec3 output(1.0, 1.0, 0.5);
     surfel se;
-    if(w.intersect(r, se)){
-        output = vec3(0,0,0);
+    if (w.intersect(r, se))
+    {
+        output = vec3(0, 0, 0);
         //we hit a area light source on first bounce
-        if(isEyeRay && se.emits){
+        if (isEyeRay && se.emits)
+        {
             output = output + se.m.rgb; //add emissive term to output
         }
         //if its not an eye ray
-        if(!isEyeRay || directLighting){
+        if (!isEyeRay || directLighting)
+        {
             //caculate the emitted area light source stuff here and point light source stuff here
             output = output + estimateDirectPointLight(se, r, w.pointLights);
             output = output + estimateDirectAreaLight(se, r, w.areaLights); //not working correctly
@@ -780,7 +810,8 @@ vec3 pathTrace(ray r, bool isEyeRay){
         // //calculate impulse scattering here and recurse
         //     output = output + estimateImpulseScattering(se, r, isEyeRay);
         // } impulse scattering is not fully implemented
-        if(!isEyeRay || indirectLighting){
+        if (!isEyeRay || indirectLighting)
+        {
             output = output + estimateIndirectLight(se, r, isEyeRay);
         }
     }
@@ -788,15 +819,18 @@ vec3 pathTrace(ray r, bool isEyeRay){
 };
 
 //untested method, 100% chance of finding dragons here
-vec3 estimateIndirectLight(surfel se, ray r, bool isEyeRay){
-    if(random() / RAND_MAX > se.extinctionProb){
+vec3 estimateIndirectLight(surfel se, ray r, bool isEyeRay)
+{
+    if (random() / RAND_MAX > se.extinctionProb)
+    {
         return vec3(0.0, 0.0, 0.0);
-    }else{
+    }
+    else
+    {
         vec3 bounce = randomBounceDir(se.normal);
         ray bounceRay(se.point, bounce);
         return pathTrace(bounceRay, false);
     }
-
 }
 
 //untested and unimplemented method for impulse scattering
@@ -806,8 +840,9 @@ vec3 estimateIndirectLight(surfel se, ray r, bool isEyeRay){
 //     return pathTrace(newRay, isEyeRay);
 // }
 
-int main(int argc, char ** argv){
-    
+int main(int argc, char **argv)
+{
+
     int height = 128;
     int width = 128;
 
@@ -817,20 +852,20 @@ int main(int argc, char ** argv){
     setupImage(imageBuffer, width, height);
 
     //cornell box
-    triangle wallleft1(1,  vec3(1, 1, 2), vec3(1, -1, 1), vec3(1, 1, 1), Material{vec3(255, 0, 0), 0.1, 0.1, 0.1}, false);
-    triangle wallleft2(2,  vec3(1, -1, 2), vec3(1, -1, 1), vec3(1, 1, 2), Material{vec3(255, 0, 0), 0.1, 0.1, 0.1}, false);
+    triangle wallleft1(1, vec3(1, 1, 2), vec3(1, -1, 1), vec3(1, 1, 1), Material{vec3(255, 0, 0), 0.1, 0.1, 0.1}, false);
+    triangle wallleft2(2, vec3(1, -1, 2), vec3(1, -1, 1), vec3(1, 1, 2), Material{vec3(255, 0, 0), 0.1, 0.1, 0.1}, false);
     triangle wallright1(3, vec3(-1, -1, 1), vec3(-1, 1, 2), vec3(-1, 1, 1), Material{vec3(0, 255, 0), 0.1, 0.1, 0.1}, false);
     triangle wallright2(4, vec3(-1, -1, 1), vec3(-1, -1, 2), vec3(-1, 1, 2), Material{vec3(0, 255, 0), 0.1, 0.1, 0.1}, false);
-    triangle wallback1(5,  vec3(-1, 1, 2), vec3(-1, -1, 2), vec3(1, -1, 2), Material{vec3(255, 255, 255), 0.1, 0.1, 0.1}, false);
-    triangle wallback2(6,  vec3(-1, 1, 2), vec3(1, -1, 2), vec3(1, 1, 2), Material{vec3(255, 255, 255), 0.1, 0.1, 0.1}, false);
+    triangle wallback1(5, vec3(-1, 1, 2), vec3(-1, -1, 2), vec3(1, -1, 2), Material{vec3(255, 255, 255), 0.1, 0.1, 0.1}, false);
+    triangle wallback2(6, vec3(-1, 1, 2), vec3(1, -1, 2), vec3(1, 1, 2), Material{vec3(255, 255, 255), 0.1, 0.1, 0.1}, false);
 
-    triangle floor1(7, vec3(1, -1, 1), vec3(1, -1, 2), vec3(-1, -1, 2), Material{vec3(255,255,255), 0.1, 0.1, 0.1}, false);
-    triangle floor2(8, vec3(-1, -1, 2), vec3(-1, -1, 1), vec3(1, -1, 1), Material{vec3(255,255,255), 0.1, 0.1, 0.1}, false);
+    triangle floor1(7, vec3(1, -1, 1), vec3(1, -1, 2), vec3(-1, -1, 2), Material{vec3(255, 255, 255), 0.1, 0.1, 0.1}, false);
+    triangle floor2(8, vec3(-1, -1, 2), vec3(-1, -1, 1), vec3(1, -1, 1), Material{vec3(255, 255, 255), 0.1, 0.1, 0.1}, false);
 
     //for use as area light set emission to true (last variable)
-    triangle roof1 = triangle(9,vec3(1, 1, 2), vec3(1, 1, 1), vec3(-1, 1, 2), Material{vec3(255,255,255), 0.1, 0.1, 0.1}, false);
-    triangle roof2 = triangle(10, vec3(-1, 1, 1), vec3(-1, 1, 2), vec3(1, 1, 1), Material{vec3(255,255,255), 0.1, 0.1, 0.1}, false);
-    
+    triangle roof1 = triangle(9, vec3(1, 1, 2), vec3(1, 1, 1), vec3(-1, 1, 2), Material{vec3(255, 255, 255), 0.1, 0.1, 0.1}, false);
+    triangle roof2 = triangle(10, vec3(-1, 1, 1), vec3(-1, 1, 2), vec3(1, 1, 1), Material{vec3(255, 255, 255), 0.1, 0.1, 0.1}, false);
+
     //--area light setup
     areaLight al(0.4, roof1, colour(255, 255, 255), 0.01, 0.01, 100, 0.1);
     areaLight al2(0.4, roof2, colour(255, 255, 255), 0.01, 0.01, 100, 0.1);
@@ -839,7 +874,7 @@ int main(int argc, char ** argv){
     //uncomment for area lights
     //w.areaLights.push_back(al); //--area lights that are not working correctly
     //w.areaLights.push_back(al2);
-   
+
     //--point light setup
     vec3 lightLocation = vec3{0, 0, -1};
     pointLight l = pointLight{colour(255, 255, 255), lightLocation, 0.01, 0.1, 80.0, 0.01};
@@ -857,16 +892,18 @@ int main(int argc, char ** argv){
     w.addTri(roof1);
     w.addTri(roof2);
 
-    for(int i = height-1; i >= 0; i--){
-        for(int j = 0; j < width; j++){
+    for (int i = height - 1; i >= 0; i--)
+    {
+        for (int j = 0; j < width; j++)
+        {
             vec3 dir = convertCoordinates(vec3(j, i, 1.0f), height, width);
             ray r = castray(e.position, dir);
             colour pixelRadiance = pathTrace(r, true);
             //store colour
             pixelRadiance = gammaCorrection(pixelRadiance, 2.2);
-            imageBuffer[i][j*3] = pixelRadiance.x;
-            imageBuffer[i][j*3 + 1] = pixelRadiance.y;
-            imageBuffer[i][j*3 + 2] = pixelRadiance.z;
+            imageBuffer[i][j * 3] = pixelRadiance.x;
+            imageBuffer[i][j * 3 + 1] = pixelRadiance.y;
+            imageBuffer[i][j * 3 + 2] = pixelRadiance.z;
         }
     }
 
