@@ -173,7 +173,7 @@ struct surfel{
     vec3 normal;
     triangle t;
     bool emits;
-    float extinctionProb = 90.0;
+    float extinctionProb = 0.9;
 
     surfel(){
 
@@ -344,7 +344,7 @@ bool isIntersectingTriangle(ray r, triangle t, vec3 &pointOut)
 
     float denom = dot(normal, r.direction);
 
-    if (denom <= 0)
+    if (denom <= 0.0)
     {
         return false;
     }
@@ -352,7 +352,7 @@ bool isIntersectingTriangle(ray r, triangle t, vec3 &pointOut)
     vec3 numerator = t.A - r.start;
     float d = dot(numerator, normal) / denom;
 
-    if (d <= 0)
+    if (d == 0.0)
     {
         return false;
     }
@@ -556,7 +556,7 @@ vec3 convertCoordinates(vec3 coord, int width, int height)
 */
 bool isInShadow(vec3 point, vec3 normal, triangle t, vec3 lPos)
 {
-    ray r = castray(point + (normal * 0.001), lPos);
+    ray r = castray(point + (normal * 0.01), lPos);
     vec3 pos;
     //cout << r.direction.x << " " << r.direction.y << " " << r.direction.z << endl;
     if (isIntersectingTriangle(r, t, pos))
@@ -653,12 +653,12 @@ vec3 estimateDirectAreaLight(surfel s, ray r, vector<areaLight> sources){
     for(areaLight l : sources){
         pixelValue = vec3(0,0,0);
         //number of samples to use
-        for(int i = 0; i < 3; i++){
+        for(int i = 0; i < 1; i++){
             surfel ls = l.generateSamplePoint();
             l.position = ls.point;
             bool inShadow = false;
             for(triangle tri : w.tris){
-                if(tri.id == s.t.id){
+                if(tri.id == s.t.id || l.t.id == tri.id){
                     // cout << tri.id << " " << s.t.id << endl;
                     continue;
                 }
@@ -679,11 +679,15 @@ vec3 estimateDirectAreaLight(surfel s, ray r, vector<areaLight> sources){
                 vec3 spec = computeSpecular(s.point, l, s.t, e);
                 vec3 intensity = amb + diff + spec;
                 vec3 triColour = blend(s.t.m.rgb, intensity);
-                pixelValue = triColour * (l.power * M_PI) * max(0.0f, fabs(dot(omega, s.normal))) * max(0.0f, fabs(dot(negomega, ls.normal)/dist2)) ;
+                pixelValue = triColour * (l.power) * max(0.0f, fabs(dot(omega, s.normal))) * max(0.0f, fabs(dot(negomega, ls.normal))) ;
        
+            }else{
+                vec3 amb = computeAmbient(s.point, l, s.m);
+                vec3 triColour = blend(s.t.m.rgb, amb);
+                pixelValue = triColour;
             }
         }
-        pixelValue / 3;
+        pixelValue / 1;
         out = out + pixelValue;
         out.x = (out.x < 0) ? 0 : (out.x > 255) ? 255 : out.x;
         out.y = (out.y < 0) ? 0 : (out.y > 255) ? 255 : out.y;
@@ -737,7 +741,7 @@ vec3 estimateIndirectLight(surfel se, ray r, bool isEyeRay);
 
 //flags for debugging
 static bool directLighting = true;
-static bool indirectLighting = true;
+static bool indirectLighting = false;
 
 vec3 pathTrace(ray r, bool isEyeRay){
     vec3 output(1.0, 1.0, 0.5);
@@ -767,7 +771,7 @@ vec3 pathTrace(ray r, bool isEyeRay){
 
 //untested method
 vec3 estimateIndirectLight(surfel se, ray r, bool isEyeRay){
-    if(rand() > se.extinctionProb){
+    if(random() / RAND_MAX > se.extinctionProb){
         return vec3(0.0, 0.0, 0.0);
     }else{
         vec3 bounce = randomBounceDir(se.normal);
@@ -805,21 +809,22 @@ int main(int argc, char ** argv){
     triangle floor1(7, vec3(1, -1, 1), vec3(1, -1, 2), vec3(-1, -1, 2), Material{vec3(255,255,255), 0.1, 0.1, 0.1}, false);
     triangle floor2(8, vec3(-1, -1, 2), vec3(-1, -1, 1), vec3(1, -1, 1), Material{vec3(255,255,255), 0.1, 0.1, 0.1}, false);
 
-    triangle roof1 = triangle(9,vec3(1, 1, 2), vec3(1, 1, 1), vec3(-1, 1, 2), Material{vec3(255,255,255), 0.1, 0.1, 0.1}, false);
-    triangle roof2 = triangle(10, vec3(-1, 1, 1), vec3(-1, 1, 2), vec3(1, 1, 1), Material{vec3(255,255,255), 0.1, 0.1, 0.1}, false);
+    //for use as area light set emission to true (last variable)
+    triangle roof1 = triangle(9,vec3(1, 1, 2), vec3(1, 1, 1), vec3(-1, 1, 2), Material{vec3(255,255,255), 0.1, 0.1, 0.1}, true);
+    triangle roof2 = triangle(10, vec3(-1, 1, 1), vec3(-1, 1, 2), vec3(1, 1, 1), Material{vec3(255,255,255), 0.1, 0.1, 0.1}, true);
     
     //--area light setup
-    areaLight al(1, roof1, colour(255, 255, 255), 0.1, 0.1, 100, 0.1);
-    areaLight al2(1, roof2, colour(255, 255, 255), 0.1, 0.1, 100, 0.1);
+    areaLight al(0.4, roof1, colour(255, 255, 255), 0.01, 0.01, 100, 0.1);
+    areaLight al2(0.4, roof2, colour(255, 255, 255), 0.01, 0.01, 100, 0.1);
     // --area light setup
 
-    //w.areaLights.push_back(al); //--area lights that are not working correctly
-    //w.areaLights.push_back(al2);
+    w.areaLights.push_back(al); //--area lights that are not working correctly
+    w.areaLights.push_back(al2);
    
     //--point light setup
     vec3 lightLocation = vec3{0, 0, -1};
     pointLight l = pointLight{colour(255, 255, 255), lightLocation, 0.01, 0.1, 80.0, 0.01};
-    w.pointLights.push_back(l);
+    //w.pointLights.push_back(l);
     //--point light setup
 
     w.addTri(wallleft1);
