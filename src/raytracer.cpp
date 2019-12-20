@@ -66,7 +66,6 @@ struct vec3
 
     vec3 operator/(float scalar)
     {
-        // cout << "divided " << this->z << endl;
         return vec3(this->x / scalar, this->y / scalar, this->z / scalar);
     }
 
@@ -269,7 +268,7 @@ struct areaLight : light
             r2 = 1 - r2;
         }
         vec3 point = t.A + ((t.B - t.A) * r1)+ ((t.C - t.A) * r2);
-        cout << "generated sample point: " << point.x << " " << point.y << " " << point.z << endl;
+        // cout << "generated sample point: " << point.x << " " << point.y << " " << point.z << endl;
         return surfel(t.m, point, getPlaneNormal(t), true);
     }
 };
@@ -562,7 +561,6 @@ bool isInShadow(vec3 point, vec3 normal, triangle t, vec3 lPos)
     //cout << r.direction.x << " " << r.direction.y << " " << r.direction.z << endl;
     if (isIntersectingTriangle(r, t, pos))
     {
-        cout << "yes" << endl;
         return true;
     }
     return false;
@@ -614,18 +612,15 @@ vec3 estimateDirectPointLight(surfel s, ray r, vector<pointLight>sources){
         bool inShadow = false;
         for(triangle tri : w.tris){
             if(tri.id == s.t.id){
-                std::cout << "same id" << endl;
-                cout << tri.id << " " << s.t.id << endl;
+                // cout << tri.id << " " << s.t.id << endl;
                 continue;
             }
             if(inShadow){
                 break;
-                std::cout << "in shadow" << endl;
             }
             inShadow = isInShadow(s.point, s.normal, tri, l.position);
         }
         if(!inShadow){
-            // std::cout << "not in shadow" << std::endl;
             vec3 omega = l.position - s.point;
             float dist = omega.length();
             //std::cout << "length of omega: " << dist << std::endl;
@@ -647,8 +642,6 @@ vec3 estimateDirectPointLight(surfel s, ray r, vector<pointLight>sources){
             out.x = (out.x < 0) ? 0 : (out.x > 255) ? 255 : out.x;
             out.y = (out.y < 0) ? 0 : (out.y > 255) ? 255 : out.y;
             out.z = (out.z < 0) ? 0 : (out.z > 255) ? 255 : out.z;
-        }else{
-            cout << "in shadow" << endl;
         }
     }
     return out;
@@ -665,13 +658,11 @@ vec3 estimateDirectAreaLight(surfel s, ray r, vector<areaLight> sources){
             bool inShadow = false;
             for(triangle tri : w.tris){
                 if(tri.id == s.t.id){
-                    std::cout << "same id" << endl;
-                    cout << tri.id << " " << s.t.id << endl;
+                    // cout << tri.id << " " << s.t.id << endl;
                     continue;
                 }
                 if(inShadow){
                     break;
-                    std::cout << "in shadow" << endl;
                 }
                 inShadow = isInShadow(s.point, s.normal, tri, ls.point);
             }
@@ -753,9 +744,7 @@ vec3 pathTrace(ray r, bool isEyeRay){
     if(w.intersect(r, se)){
         output = vec3(0,0,0);
         //we hit a area light source on first bounce
-        std::cout << "intersection" << std::endl;
         if(isEyeRay && se.emits){
-            std::cout << "emission added\n" << std::endl;
             output = output + se.m.rgb; //add emissive term to output
         }
         //if its not an eye ray
@@ -769,7 +758,6 @@ vec3 pathTrace(ray r, bool isEyeRay){
         //     output = output + estimateImpulseScattering(se, r, isEyeRay);
         // } impulse scattering is not fully implemented
         if(!isEyeRay || indirectLighting){
-            printf("indirect lighting");
             output = output + estimateIndirectLight(se, r, isEyeRay);
         }
     }
@@ -797,7 +785,6 @@ vec3 estimateIndirectLight(surfel se, ray r, bool isEyeRay){
 
 int main(int argc, char ** argv){
     
-    std::cout << "entering main" << std::endl;
     int height = 128;
     int width = 128;
 
